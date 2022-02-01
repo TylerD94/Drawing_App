@@ -3,6 +3,7 @@ package com.example.drawing_app
 import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
+import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.View
 
@@ -24,11 +25,10 @@ class DrawView(context: Context, attributes : AttributeSet) : View(context, attr
         mDrawPaint = Paint()
         mDrawPath = CustomPath(color, mBrushSize)
         mDrawPaint!!.color = color
-        mDrawPaint!!.style = Paint.Style.STROKE
-        mDrawPaint!!.strokeJoin = Paint.Join.ROUND
-        mDrawPaint!!.strokeCap = Paint.Cap.ROUND
+        mDrawPaint!!.style = Paint.Style.STROKE // This is to draw a STROKE style
+        mDrawPaint!!.strokeJoin = Paint.Join.ROUND // This is for stroke join
+        mDrawPaint!!.strokeCap = Paint.Cap.ROUND // This is for stroke cap
         mCanvasPaint = Paint(Paint.DITHER_FLAG)
-        mBrushSize = 20.toFloat()
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -79,6 +79,13 @@ class DrawView(context: Context, attributes : AttributeSet) : View(context, attr
         invalidate()
 
         return true
+    }
+
+    fun changeBrushSize(newSize : Float) {
+        mBrushSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP,
+            newSize, resources.displayMetrics)
+
+        mDrawPaint!!.strokeWidth = mBrushSize
     }
 
 
