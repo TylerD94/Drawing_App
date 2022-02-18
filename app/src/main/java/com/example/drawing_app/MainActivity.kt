@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.media.MediaScannerConnection
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.provider.MediaStore
@@ -36,6 +37,7 @@ class MainActivity : AppCompatActivity() {
     private var redoBtn : ImageButton? = null
     private var saveBtn : ImageButton? = null
     private var mImageButtonCurrentPaint : ImageButton? = null
+    var customProgressDialog: Dialog? = null
 
 
 
@@ -114,6 +116,7 @@ class MainActivity : AppCompatActivity() {
             // On click, check if able to write to external storage
 
             if (isReadStorageAllowed()) {
+                showProgressDialog()
                 lifecycleScope.launch{
                     val flDrawView: FrameLayout = findViewById(R.id.fl_draw_view_container)
 
@@ -124,7 +127,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun showBrushSizeDialog(){
+    private fun showBrushSizeDialog() {
         val brushDialog = Dialog(this)
         brushDialog.setContentView(R.layout.dialog_brush_size)
         brushDialog.setTitle("Set brush size")
@@ -149,7 +152,7 @@ class MainActivity : AppCompatActivity() {
         brushDialog.show()
     }
     
-    fun paintClicked(view: View){
+    fun paintClicked(view: View) {
         if (view != mImageButtonCurrentPaint){
             val imageButton = view as ImageButton
             val colorTag = imageButton.tag.toString()
@@ -188,6 +191,24 @@ class MainActivity : AppCompatActivity() {
                 Manifest.permission.READ_EXTERNAL_STORAGE,
                 Manifest.permission.WRITE_EXTERNAL_STORAGE
             ))
+        }
+    }
+
+    private fun showProgressDialog() {
+        customProgressDialog = Dialog(this@MainActivity)
+
+        // Set the screen content from a layout resource.
+        // The resource will be inflated, adding all top-level views to the screen
+        customProgressDialog?.setContentView(R.layout.dialog_custom_progress)
+
+        // Start the dialog and show it on screen
+        customProgressDialog?.show()
+    }
+
+    private fun cancelProgressDialog() {
+        if (customProgressDialog != null) {
+            customProgressDialog?.dismiss()
+            customProgressDialog = null
         }
     }
 
@@ -237,10 +258,14 @@ class MainActivity : AppCompatActivity() {
 
                     // runOnUiThread allows for coroutine code to be run on main thread
                     runOnUiThread{
+                        cancelProgressDialog()
                         if (result.isNotEmpty()) {
                             Toast.makeText(this@MainActivity,
                             "File saved sucessfully : $result",
                             Toast.LENGTH_LONG).show()
+
+                            // Call image sharing dialog after saving image
+                            shareImage(result)
                         } else {
                             Toast.makeText(this@MainActivity,
                             "Something went wrong when saving the file.",
@@ -249,6 +274,7 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
                 catch(e: Exception) {
+                    // Set result to an empty string and print stack trace
                     result = ""
                     e.printStackTrace()
                 }
@@ -256,6 +282,17 @@ class MainActivity : AppCompatActivity() {
         }
 
         return result
+    }
+
+    private fun shareImage(result: String) {
+        MediaScannerConnection.scanFile(this, arrayOf(result), null) {
+            path, uri ->
+            val shareIntent = Intent()
+            shareIntent.action = Intent.ACTION_SEND
+            shareIntent.putExtra(Intent.EXTRA_STREAM, uri)
+            shareIntent.type = "image/png"
+            startActivity(Intent.createChooser(shareIntent, "Share"))
+        }
     }
 
 }

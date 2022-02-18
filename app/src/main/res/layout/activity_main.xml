@@ -151,7 +151,7 @@
         android:layout_width="50dp"
         android:layout_height="50dp"
         android:layout_margin="5dp"
-        android:src="@drawable/gallery"
+        android:src="@drawable/ic_gallery"
         android:scaleType="fitXY"/>
 
         <ImageButton
@@ -159,7 +159,7 @@
             android:layout_width="50dp"
             android:layout_height="50dp"
             android:layout_margin="5dp"
-            android:src="@drawable/undo"
+            android:src="@drawable/ic_undo"
             android:scaleType="fitXY"/>
 
         <ImageButton
@@ -167,7 +167,7 @@
             android:layout_width="50dp"
             android:layout_height="50dp"
             android:layout_margin="5dp"
-            android:src="@drawable/redo"
+            android:src="@drawable/ic_redo"
             android:scaleType="fitXY"/>
 
         <ImageButton
