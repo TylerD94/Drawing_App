@@ -16,9 +16,27 @@ class DrawView(context: Context, attributes : AttributeSet) : View(context, attr
     private var color = Color.BLACK
     private var canvas : Canvas? = null
     private val mPaths = ArrayList<CustomPath>()
+    private val mUndoPaths = ArrayList<CustomPath>()
+    private var mRedoPaths = 0
+
 
     init {
         setUpDrawing()
+    }
+
+    fun onClickUndo() {
+        if (mPaths.size > 0) {
+            mUndoPaths.add(mPaths.removeAt(mPaths.size - 1))
+            mRedoPaths++
+            invalidate()
+        }
+    }
+
+    fun onClickRedo() {
+        if (mUndoPaths.size > 0 && mRedoPaths > 0) {
+            mPaths.add(mUndoPaths.removeAt(mUndoPaths.size - 1))
+            invalidate()
+        }
     }
 
     private fun setUpDrawing() {
@@ -73,6 +91,7 @@ class DrawView(context: Context, attributes : AttributeSet) : View(context, attr
             MotionEvent.ACTION_UP -> {
                 mPaths.add(mDrawPath!!)
                 mDrawPath = CustomPath(color, mBrushSize)
+                mRedoPaths = 0
             }
             else -> return false
         }

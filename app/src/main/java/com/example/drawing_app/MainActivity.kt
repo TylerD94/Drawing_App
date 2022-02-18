@@ -4,26 +4,37 @@ import android.Manifest
 import android.app.AlertDialog
 import android.app.Dialog
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.provider.MediaStore
 import android.view.View
-import android.widget.ImageButton
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.Toast
+import android.widget.*
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.get
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileOutputStream
 
 
 class MainActivity : AppCompatActivity() {
 
     private var drawView : DrawView? = null
     private var brushSizeBtn : ImageButton? = null
+    private var undoBtn : ImageButton? = null
+    private var redoBtn : ImageButton? = null
+    private var saveBtn : ImageButton? = null
     private var mImageButtonCurrentPaint : ImageButton? = null
 
 
@@ -87,6 +98,30 @@ class MainActivity : AppCompatActivity() {
         brushSizeBtn!!.setOnClickListener {
             showBrushSizeDialog()
         }
+
+        undoBtn = findViewById(R.id.imbtn_undo)
+        undoBtn!!.setOnClickListener {
+            drawView!!.onClickUndo()
+        }
+
+        redoBtn = findViewById(R.id.imbtn_redo)
+        redoBtn!!.setOnClickListener {
+            drawView!!.onClickRedo()
+        }
+
+        saveBtn = findViewById(R.id.imbtn_save)
+        saveBtn!!.setOnClickListener {
+            // On click, check if able to write to external storage
+
+            if (isReadStorageAllowed()) {
+                lifecycleScope.launch{
+                    val flDrawView: FrameLayout = findViewById(R.id.fl_draw_view_container)
+
+                    saveBitmapFile(getBitmapFromView(flDrawView))
+                }
+            }
+
+        }
     }
 
     private fun showBrushSizeDialog(){
@@ -133,6 +168,14 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun isReadStorageAllowed(): Boolean {
+        val result = ContextCompat.checkSelfPermission(this,
+        Manifest.permission.READ_EXTERNAL_STORAGE
+        )
+
+        return result == PackageManager.PERMISSION_GRANTED
+    }
+
     private fun requestStoragePermission(){
         if(ActivityCompat.shouldShowRequestPermissionRationale(
                 this,
@@ -142,8 +185,8 @@ class MainActivity : AppCompatActivity() {
                 "Drawing app requires access to external storage.")
         } else {
             requestPermission.launch(arrayOf(
-                Manifest.permission.READ_EXTERNAL_STORAGE
-                // TODO: Add writing to external storage permission
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
             ))
         }
     }
@@ -154,6 +197,65 @@ class MainActivity : AppCompatActivity() {
             .setMessage(message)
             .setPositiveButton("Cancel"){dialog, _ -> dialog.dismiss()}
         builder.create().show()
+    }
+
+    private fun getBitmapFromView(view: View) : Bitmap{
+        val returnedBitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(returnedBitmap)
+
+        val bgDrawable = view.background
+        if(bgDrawable != null) {
+            bgDrawable.draw(canvas)
+        } else {
+            canvas.drawColor(Color.WHITE)
+        }
+
+        view.draw(canvas)
+
+        return returnedBitmap
+    }
+
+    private suspend fun saveBitmapFile(mBitmap: Bitmap?) : String {
+        var result = ""
+
+        // withContext runs coroutine on a separate thread, allowing for background tasks
+        withContext(Dispatchers.IO) {
+            if(mBitmap != null) {
+                try {
+                    val bytes = ByteArrayOutputStream()
+                    mBitmap.compress(Bitmap.CompressFormat.PNG, 90, bytes)
+
+                    val f = File(externalCacheDir?.absoluteFile.toString() +
+                    File.separator + "DrawingApp_" +
+                            System.currentTimeMillis() / 1000 + ".png")
+
+                    val fo = FileOutputStream(f)
+                    fo.write(bytes.toByteArray())
+                    fo.close()
+
+                    result = f.absolutePath
+
+                    // runOnUiThread allows for coroutine code to be run on main thread
+                    runOnUiThread{
+                        if (result.isNotEmpty()) {
+                            Toast.makeText(this@MainActivity,
+                            "File saved sucessfully : $result",
+                            Toast.LENGTH_LONG).show()
+                        } else {
+                            Toast.makeText(this@MainActivity,
+                            "Something went wrong when saving the file.",
+                            Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+                catch(e: Exception) {
+                    result = ""
+                    e.printStackTrace()
+                }
+            }
+        }
+
+        return result
     }
 
 }
